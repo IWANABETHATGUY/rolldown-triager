@@ -20,7 +20,7 @@
     "@typescript/native-preview": "7.0.0-dev.20260707.2",
     "oxfmt": "^0.70.0",
     "oxlint": "^1.85.0",
-    "rolldown": "^1.2.10",
+    "rolldown": "^1.2.13",
     "vitest": "^5.0.1"
   },
   "engines": {
