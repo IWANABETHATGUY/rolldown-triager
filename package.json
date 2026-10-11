@@ -19,7 +19,7 @@
     "@types/node": "^24",
     "@typescript/native-preview": "7.0.0-dev.20260707.2",
     "oxfmt": "^0.70.0",
-    "oxlint": "^1.85.0",
+    "oxlint": "^1.86.0",
     "rolldown": "^1.2.10",
     "vitest": "^5.0.1"
   },
