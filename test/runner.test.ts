@@ -6,17 +6,23 @@ import { checks } from "../src/checks/index.ts";
 import { MARKER } from "../src/core/comment.ts";
 import { resolveConfig } from "../src/core/config.ts";
 import type { IssueClient, IssueComment } from "../src/core/github.ts";
-import { createRecordedJev, FixtureStale } from "../src/core/jev.ts";
+import { createRecordedClient, FixtureStale } from "../src/core/model.ts";
 import { applyReport, runTriage, selectChecks } from "../src/core/runner.ts";
 import type { Issue, Report } from "../src/core/types.ts";
 import { FIXTURES, loadIssue } from "./helpers.ts";
 import { issue as makeIssue } from "./support.ts";
 
-const jev = createRecordedJev(join(FIXTURES, "answers"));
+const client = createRecordedClient(join(FIXTURES, "answers"));
 const config = resolveConfig();
 
 async function replay(number: number, over: Partial<Issue> = {}): Promise<Report> {
-  return runTriage({ issue: { ...loadIssue(number), ...over }, config, jev, checks, force: true });
+  return runTriage({
+    issue: { ...loadIssue(number), ...over },
+    config,
+    client,
+    checks,
+    force: true,
+  });
 }
 
 const effective = (r: Report): Record<string, string> =>
@@ -37,7 +43,7 @@ describe("runTriage on recorded fixtures (offline)", () => {
     const r = await runTriage({
       issue: loadIssue(10938),
       config: applyConfig,
-      jev,
+      client,
       checks,
       force: true,
     });
@@ -95,7 +101,7 @@ describe("runTriage on recorded fixtures (offline)", () => {
   });
 
   it("short-circuits when needs-triage is absent and force is off", async () => {
-    const r = await runTriage({ issue: loadIssue(10812), config, jev, checks });
+    const r = await runTriage({ issue: loadIssue(10812), config, client, checks });
     expect(r.shortCircuit).toBe("already-triaged");
     expect(r.results).toEqual([]);
   });
@@ -178,7 +184,7 @@ function fakeGitHub(initial: Issue) {
 describe("applyReport", () => {
   const applyConfig = resolveConfig({ modes: "priority=apply" });
   const report = async (): Promise<Report> =>
-    runTriage({ issue: loadIssue(10938), config: applyConfig, jev, checks, force: true });
+    runTriage({ issue: loadIssue(10938), config: applyConfig, client, checks, force: true });
 
   it("dry run writes nothing but returns the comment", async () => {
     const { gh, calls } = fakeGitHub(makeIssue({ number: 10938 }));

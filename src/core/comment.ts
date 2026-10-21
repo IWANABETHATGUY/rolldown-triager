@@ -65,7 +65,7 @@ export function renderComment(report: Report, labels: LabelNames, meta: CommentM
   const model = report.model ?? "no model call";
   const lines = [
     MARKER,
-    `Automated triage by rolldown-triager (Jev ${model}). A maintainer will confirm.`,
+    `Automated triage by rolldown-triager (${model}). A maintainer will confirm.`,
     "",
     ...report.results.map((r) => renderLine(r, labels)),
     "",

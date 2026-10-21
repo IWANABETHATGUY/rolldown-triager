@@ -3,7 +3,7 @@ import { join } from "node:path";
 
 import { checks } from "../checks/index.ts";
 import type { IssueClient, ListedIssue } from "../core/github.ts";
-import { createRecordedJev, type JevClient } from "../core/jev.ts";
+import { createRecordedClient, type ModelClient } from "../core/model.ts";
 import { runTriage } from "../core/runner.ts";
 import type { PrioritySlot, Report, ResolvedConfig, Thresholds } from "../core/types.ts";
 import { PRIORITY_SLOTS } from "../core/types.ts";
@@ -17,7 +17,7 @@ export interface EvalOptions {
   gh: IssueClient;
   repo: string;
   config: ResolvedConfig;
-  jev: JevClient;
+  client: ModelClient;
   cacheDir: string;
   since?: string | undefined;
   limit?: number | undefined;
@@ -129,8 +129,10 @@ async function evaluate(
   };
   const out = new Map<number, Prediction>();
   for (const sample of samples) {
-    const jev = createRecordedJev(join(options.cacheDir, "answers"), {
-      recordThrough: options.jev,
+    // One directory per model: recordings are files named by issue number, so a
+    // second model in the same directory overwrote the first one's answers.
+    const client = createRecordedClient(join(options.cacheDir, "answers", config.model), {
+      recordThrough: options.client,
       label: String(sample.issue.number),
     });
     // Strip the human's decision so the policy does not defer to it.
@@ -140,7 +142,7 @@ async function evaluate(
         l !== config.labels.needsReproduction,
     );
     const issue = { ...sample.issue, labels: [...new Set([config.labels.needsTriage, ...labels])] };
-    const report = await runTriage({ issue, config, jev, checks, force: true });
+    const report = await runTriage({ issue, config, client, checks, force: true });
     out.set(sample.issue.number, predict(report, config));
   }
   return out;

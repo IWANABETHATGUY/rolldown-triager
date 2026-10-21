@@ -10,7 +10,7 @@ import type {
   TriageState,
 } from "./types.ts";
 
-// Builds the one object Jev sees. Anything not listed here (labels, author,
+// Builds the one object the model sees. Anything not listed here (labels, author,
 // comments, dates, the link list) stays out on purpose.
 
 const CAPS: Record<SectionKey, SanitizeOptions> = {

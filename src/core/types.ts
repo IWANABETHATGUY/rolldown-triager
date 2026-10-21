@@ -68,7 +68,7 @@ export interface ParsedIssue {
   links: ReproLink[];
 }
 
-/** Exactly what is sent to Jev as `state`. Nothing else goes in. (A type alias, not an interface, so it satisfies the SDK's `EntryType`.) */
+/** Exactly what is sent to the model as `state`. Nothing else goes in. (A type alias, not an interface, so it satisfies the SDK's `EntryType`.) */
 export type TriageState = {
   issue: {
     title: string;
@@ -222,7 +222,7 @@ export interface Check<O = unknown> {
   /** When true, a `fail`/`unsure` gate from this check downgrades every other check to suggest. */
   defaultMode?: Mode;
   defaultOptions?: O;
-  /** Questions to batch into the single Jev request; `null` = skipped, `{}` = decide without the model. */
+  /** Questions to batch into the single model request; `null` = skipped, `{}` = decide without the model. */
   questions(ctx: Ctx<O>): Questions | null;
   decide(answers: Answers, ctx: Ctx<O>): Verdict;
 }

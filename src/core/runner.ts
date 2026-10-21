@@ -1,7 +1,7 @@
 import { answersFor } from "./answers.ts";
 import { MARKER, renderComment, type CommentMeta } from "./comment.ts";
 import type { IssueClient } from "./github.ts";
-import type { JevClient } from "./jev.ts";
+import type { ModelClient } from "./model.ts";
 import { extractReproLinks } from "./links.ts";
 import { detectKind, detectTemplate, parseSections, requiredMissing } from "./parse.ts";
 import { applyPolicy, modeFor, type PolicyInput } from "./policy.ts";
@@ -26,7 +26,7 @@ import type { Questions } from "@typesafe-ai/sdk";
 export interface RunInput {
   issue: Issue;
   config: ResolvedConfig;
-  jev: JevClient;
+  client: ModelClient;
   /** All registered checks; `config.checks` picks and orders the enabled ones. */
   checks: Check[];
   /** Run even when `needs-triage` is absent (local dry-runs, evals). */
@@ -62,7 +62,7 @@ export function parseIssue(issue: Issue): ParsedIssue & { kind: Kind; kindSource
 }
 
 export async function runTriage(input: RunInput): Promise<Report> {
-  const { issue, config, jev } = input;
+  const { issue, config, client } = input;
   const base: Omit<
     Report,
     "kind" | "kindSource" | "kindConfidence" | "flags" | "results" | "plan" | "questionsAsked"
@@ -134,7 +134,7 @@ export async function runTriage(input: RunInput): Promise<Report> {
   let usage: Report["usage"] = null;
   const questionsAsked = Object.keys(merged).length;
   if (questionsAsked > 0) {
-    const result = await jev.ask(state, merged, config.model);
+    const result = await client.ask(state, merged, config.model);
     answers = result.answers;
     model = result.model;
     usage = result.usage;

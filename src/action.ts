@@ -6,7 +6,7 @@ import { ConfigError, resolveApiKey, resolveConfig } from "./core/config.ts";
 import { formatError } from "./core/errors.ts";
 import { createGitHubClient } from "./core/github.ts";
 import { PRIORITY_SLOTS, type ResolvedConfig } from "./core/types.ts";
-import { createTypeSafeJev } from "./core/jev.ts";
+import { createTypeSafeClient } from "./core/model.ts";
 import { applyReport, runTriage } from "./core/runner.ts";
 import type { Report } from "./core/types.ts";
 
@@ -69,7 +69,7 @@ async function main(): Promise<void> {
   });
 
   const gh = createGitHubClient({ token, repo });
-  const jev = createTypeSafeJev(apiKey);
+  const client = createTypeSafeClient(apiKey);
   const runUrl =
     process.env.GITHUB_SERVER_URL && process.env.GITHUB_REPOSITORY && process.env.GITHUB_RUN_ID
       ? `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`
@@ -77,7 +77,7 @@ async function main(): Promise<void> {
 
   console.log(`::group::rolldown-triager on ${repo}#${issueNumber}${dryRun ? " (dry run)" : ""}`);
   const issue = await gh.getIssue(issueNumber);
-  const report = await runTriage({ issue, config, jev, checks });
+  const report = await runTriage({ issue, config, client, checks });
   for (const r of report.results) {
     console.log(
       `${r.id}: ${r.effective}${r.labels.length ? ` ${r.labels.join(", ")}` : ""}${r.downgradedBecause.length ? ` (${r.downgradedBecause.join("; ")})` : ""}`,

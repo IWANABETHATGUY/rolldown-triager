@@ -127,7 +127,7 @@ policy applies the invariants. Question text and thresholds live in `src/questio
 ```
 pnpm install
 pnpm lint · pnpm typecheck · pnpm test         # oxlint + oxfmt, tsgo, vitest (offline, recorded answers)
-pnpm cli state --issue N                       # parsed sections, links, flags, and the exact Jev state
+pnpm cli state --issue N                       # parsed sections, links, flags, and the exact model state
 pnpm cli run --issue N [--apply]               # dry run by default; --apply writes labels + comment
 pnpm cli record --issue N …                    # refresh test fixtures (needs JEV_KEY / TYPESAFE_API_KEY)
 pnpm cli eval --since 2026-03-01 [--sweep]     # agreement metrics; --sweep tries threshold grids

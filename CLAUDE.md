@@ -22,6 +22,9 @@ pnpm cli state|run|record|eval ... # loads .env (JEV_KEY or TYPESAFE_API_KEY); G
 
 `pnpm cli run --issue N` is a dry run and forces the run even without `needs-triage`; `--apply` writes for
 real and then respects the label. Only `record` and `eval` (first time) spend Jev tokens; both are cheap.
+`--model clef` or `--model clef-flash` runs on Cloudflare's Clef instead (`createClefClient`, same System One
+shapes; needs `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`). CLI only for now: the thresholds are tuned
+on Jev, and the eval keeps a separate answer cache per model so the two can be compared.
 
 ## Architecture
 
@@ -45,7 +48,7 @@ second round trip. Each check then gets `answersFor(id)` — its own keys, prefi
 **Deterministic first, model second.** `parse.ts` (form sections from `### ` headings, template detection,
 required fields), `links.ts` (repro links by host; REPL hashes decoded by `repl.ts`, a port of the
 `rolldown-repl` skill decoder), `detectKind` (native issue `type` › template › title prefix) all run before
-any question is written. `sanitize.ts` + `state.ts` build the _only_ thing Jev sees: title, kind, template,
+any question is written. `sanitize.ts` + `state.ts` build the _only_ thing the model sees: title, kind, template,
 capped sections. Labels, author, comments, dates, and the link list are never sent — Jev's accuracy drops
 with irrelevant state, and issue bodies are attacker-controlled (a report saying "P0 blocker" only trips
 `argues_priority`, which forces suggest).
@@ -81,7 +84,7 @@ upward. Do not change it to p2 without re-measuring — p2 scores 20% there and 
 **Kind resolution.** When kind is unknown, priority asks both branches and reproduction asks its rubric;
 `decide` uses the kind the model settled on. Still one request.
 
-**Recorded answers.** `createRecordedJev` keys recordings by `requestHash(state, questions, model)`. Any
+**Recorded answers.** `createRecordedClient` keys recordings by `requestHash(state, questions, model)`. Any
 change to sanitizing, question text, or the model invalidates them on purpose: tests throw `FixtureStale`
 until you run `pnpm cli record --issue <n>` for the 12 fixtures in `test/fixtures/issues`. The eval cache in
 `.cache/eval` works the same way, so threshold and decision-code changes re-evaluate offline for free.

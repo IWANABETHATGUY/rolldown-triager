@@ -76,7 +76,7 @@ describe("renderComment", () => {
     expect(text).toBe(
       [
         MARKER,
-        "Automated triage by rolldown-triager (Jev jev-1.13.0). A maintainer will confirm.",
+        "Automated triage by rolldown-triager (jev-1.13.0). A maintainer will confirm.",
         "",
         "- reproduction: set `needs-reproduction` — no reproduction found (steps 0.6/3) Please add a REPL, StackBlitz or repository link; the label closes the issue after 14 days without activity.",
         "- priority: suggest `p1: important` — build unusable in a common setup; could be p0 if it hits most users (unusable 0.91, common setup 0.8) [not applied: could be p0; issue already has a priority label]",

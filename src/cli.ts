@@ -8,7 +8,13 @@ import { renderComment, renderLine } from "./core/comment.ts";
 import { ConfigError, resolveApiKey, resolveConfig } from "./core/config.ts";
 import { formatError } from "./core/errors.ts";
 import { createGitHubClient, type IssueClient } from "./core/github.ts";
-import { createRecordedJev, createTypeSafeJev, type JevClient } from "./core/jev.ts";
+import {
+  createClefClient,
+  createRecordedClient,
+  createTypeSafeClient,
+  isClefModel,
+  type ModelClient,
+} from "./core/model.ts";
 import { applyReport, parseIssue, runTriage } from "./core/runner.ts";
 import { buildState } from "./core/state.ts";
 import type { Issue, Report, ResolvedConfig } from "./core/types.ts";
@@ -16,13 +22,14 @@ import { runEval } from "./eval/eval.ts";
 
 const USAGE = `rolldown-triager CLI
 
-  pnpm cli state  --issue N [--repo owner/repo]        parsed sections, links, flags and the exact Jev state
+  pnpm cli state  --issue N [--repo owner/repo]        parsed sections, links, flags and the exact model state
   pnpm cli run    --issue N [--apply] [--force] [--json] dry-run by default; --apply writes labels/comment
-  pnpm cli record --issue N [--issue M ...]             save issue JSON + Jev answers under test/fixtures
+  pnpm cli record --issue N [--issue M ...]             save issue JSON + model answers under test/fixtures
   pnpm cli eval   [--since YYYY-MM-DD] [--limit N] [--sweep] [--include-untriaged]  replay triaged issues, print agreement
 
   Shared: --repo (default rolldown/rolldown) --checks --modes --options --labels --thresholds --comment --model
   Env:    GH_TOKEN or GITHUB_TOKEN (else \`gh auth token\`), TYPESAFE_API_KEY or JEV_KEY
+          --model clef|clef-flash: CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID instead of the TypeSafe key
 `;
 
 const { values, positionals } = parseArgs({
@@ -61,10 +68,25 @@ function githubToken(): string {
   }
 }
 
-function jevKey(): string {
+function typesafeKey(): string {
   return resolveApiKey(
     process.env.TYPESAFE_API_KEY ?? process.env.JEV_KEY,
     "a TypeSafe key (TYPESAFE_API_KEY, or JEV_KEY in .env)",
+  );
+}
+
+/** The model name picks the provider: `clef` / `clef-flash` run on Workers AI, anything else on TypeSafe. */
+function liveClient(model: string): ModelClient {
+  if (!isClefModel(model)) return createTypeSafeClient(typesafeKey());
+  return createClefClient(
+    resolveApiKey(
+      process.env.CLOUDFLARE_API_TOKEN,
+      "a Cloudflare API token (CLOUDFLARE_API_TOKEN)",
+    ),
+    resolveApiKey(
+      process.env.CLOUDFLARE_ACCOUNT_ID,
+      "a Cloudflare account id (CLOUDFLARE_ACCOUNT_ID)",
+    ),
   );
 }
 
@@ -132,16 +154,16 @@ async function cmdState(gh: IssueClient): Promise<void> {
 
 async function cmdRun(gh: IssueClient): Promise<void> {
   const cfg = config();
-  const jev: JevClient = values.offline
-    ? createRecordedJev(values.answers)
-    : createTypeSafeJev(jevKey());
+  const client: ModelClient = values.offline
+    ? createRecordedClient(values.answers)
+    : liveClient(cfg.model);
   const dryRun = !values.apply;
   for (const n of issueNumbers()) {
     const issue = await gh.getIssue(n);
     const report = await runTriage({
       issue,
       config: cfg,
-      jev,
+      client,
       checks,
       force: values.force || dryRun,
     });
@@ -167,7 +189,7 @@ async function cmdRun(gh: IssueClient): Promise<void> {
 
 async function cmdRecord(gh: IssueClient): Promise<void> {
   const cfg = config();
-  const live = createTypeSafeJev(jevKey());
+  const live = liveClient(cfg.model);
   const issuesDir = join("test", "fixtures", "issues");
   mkdirSync(issuesDir, { recursive: true });
   for (const n of issueNumbers()) {
@@ -182,8 +204,8 @@ async function cmdRecord(gh: IssueClient): Promise<void> {
       htmlUrl: issue.htmlUrl,
     };
     writeFileSync(join(issuesDir, `${n}.json`), `${JSON.stringify(fixture, null, 2)}\n`);
-    const jev = createRecordedJev(values.answers, { recordThrough: live, label: String(n) });
-    const report = await runTriage({ issue, config: cfg, jev, checks, force: true });
+    const client = createRecordedClient(values.answers, { recordThrough: live, label: String(n) });
+    const report = await runTriage({ issue, config: cfg, client, checks, force: true });
     console.log(
       `#${n}: ${report.questionsAsked} questions, kind ${report.kind}, ${report.results.map((r) => `${r.id}=${r.effective}`).join(" ")}`,
     );
@@ -204,18 +226,20 @@ async function main(): Promise<void> {
       return cmdRun(gh);
     case "record":
       return cmdRecord(gh);
-    case "eval":
+    case "eval": {
+      const cfg = config();
       return runEval({
         gh,
         repo: values.repo,
-        config: config(),
-        jev: createTypeSafeJev(jevKey()),
+        config: cfg,
+        client: liveClient(cfg.model),
         cacheDir: values.cache,
         since: values.since,
         limit: values.limit ? Number.parseInt(values.limit, 10) : undefined,
         sweep: values.sweep,
         includeUntriaged: values["include-untriaged"],
       });
+    }
     default:
       throw new Error(`unknown command ${command}\n${USAGE}`);
   }
