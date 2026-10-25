@@ -21,7 +21,7 @@
     "oxfmt": "^0.70.0",
     "oxlint": "^1.85.0",
     "rolldown": "^1.2.10",
-    "vitest": "^5.0.1"
+    "vitest": "^5.0.5"
   },
   "engines": {
     "node": ">=22.18"
